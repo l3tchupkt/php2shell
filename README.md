@@ -1,53 +1,96 @@
 # PHP2Shell Research Lab
 
-A research repository for examining the reported PHP2Shell vulnerabilities and evaluating defensive controls in an isolated, intentionally vulnerable PHP environment.
+A Docker-based PHP security research lab for studying multipart uploads, session upload-progress behavior, and defensive validation in an intentionally vulnerable local application.
 
-> **Safety notice:** Use this lab only on systems you own or have explicit written permission to test. Do not expose the vulnerable container to the public internet. This repository is for controlled security research and defensive validation; it is not a production deployment.
+**Keywords:** PHP security, security research, vulnerability analysis, Docker, multipart/form-data, session upload progress, memory safety, defensive testing, penetration testing lab.
 
-## Scope
+> **Authorized use only.** Use this project only in a disposable environment you own or are explicitly authorized to test. Do not expose the vulnerable service to the public internet. Review all code before running it.
 
-This repository contains a Docker-based test environment and supporting files for studying:
-
-- PHP multipart request and session upload-progress behavior.
-- The security impact of running unpatched PHP versions.
-- Detection opportunities in application, web-server, and process telemetry.
-- Patch verification and defensive configuration.
-
-CVE identifiers, affected-version ranges, severity scores, and exploit claims should be treated as **unverified until checked against official PHP security advisories**. Do not use this README as the sole source for vulnerability or remediation decisions.
-
-## Repository layout
+## What's included
 
 - `Dockerfile`, `docker-compose.yml` — containerized lab setup.
-- `php.ini`, `nginx.conf`, `supervisord.conf` — lab service configuration.
-- `www/` — deliberately vulnerable test application.
-- `scripts/verify.sh` — lab verification helper.
-- `exploit/` — proof-of-concept research files; inspect the code before running anything.
+- `php.ini`, `nginx.conf`, `supervisord.conf` — lab configuration.
+- `www/` — intentionally vulnerable test application.
+- `scripts/verify.sh` — local lab verification helper.
+- `exploit/` — Python security-research scripts and dependency list.
 
-## Safe handling
+## Requirements
 
-1. Run the lab only in a disposable local environment.
-2. Keep the container bound to localhost or an isolated network; do not publish it to the internet.
-3. Do not test third-party hosts or bulk-scan targets without explicit authorization.
-4. Avoid mounting host directories, Docker sockets, SSH keys, credentials, or other sensitive files into the lab.
-5. Prefer patched PHP builds for any non-research workload.
-6. Tear down the lab when finished and review container logs for unexpected behavior.
+- Docker Engine or Docker Desktop with Compose support.
+- Python 3.10+ for inspecting and working with the research scripts.
+- A disposable environment. Do not mount host credentials, sensitive directories, or the Docker socket into the lab.
 
-## Defensive validation
+## Start the local lab
 
-- Inventory PHP versions across your systems.
-- Compare installed versions with the official PHP security release notes.
-- Upgrade to a vendor-supported fixed release; configuration changes are not a substitute for patching.
-- Review web-server and PHP-FPM logs for unusual multipart request patterns, repeated worker crashes, and unexpected child-process execution.
-- Validate fixes in a controlled staging environment before production rollout.
+Clone the repository:
+
+```bash
+git clone https://github.com/l3tchupkt/php2shell.git
+cd php2shell
+```
+
+Review `docker-compose.yml` and the service configuration before starting anything. Confirm the vulnerable service is bound to localhost or an isolated network and is not publicly accessible.
+
+Build and start the lab:
+
+```bash
+docker compose up --build -d
+docker compose ps
+```
+
+## Verify the setup
+
+Run the included verification helper:
+
+```bash
+bash scripts/verify.sh
+```
+
+To inspect the Python scripts' supported options without launching a test, use their help output:
+
+```bash
+python3 exploit/php2shell.py --help
+python3 exploit/uaf_probe.py --help
+```
+
+For local development, create a virtual environment before installing the listed dependencies:
+
+```bash
+python3 -m venv .venv
+# Linux/macOS:
+source .venv/bin/activate
+# Windows PowerShell:
+# .venv\\Scripts\\Activate.ps1
+python -m pip install -r exploit/requirements.txt
+```
+
+Only perform active testing against a lab instance you control or a target covered by explicit written authorization. Do not use these scripts for bulk scanning or against public/third-party systems without a clearly defined, authorized scope. Review the code and its network behavior before execution.
+
+## Stop the lab
+
+When finished:
+
+```bash
+docker compose down
+```
+
+Review container logs and remove disposable test data as appropriate.
+
+## Defensive guidance
+
+- Confirm affected and fixed versions using official PHP security advisories.
+- Upgrade to a supported, patched PHP release; configuration changes are not a substitute for patching.
+- Review web-server and PHP-FPM logs for unusual multipart requests, repeated worker crashes, and unexpected child-process execution.
+- Validate fixes in an isolated staging environment before production rollout.
 
 ## References
 
-- [Official PHP website](https://www.php.net/)
+- [PHP official website](https://www.php.net/)
 - [PHP supported versions](https://www.php.net/supported-versions.php)
 - [PHP security announcements](https://www.php.net/archive/)
-- [Original upstream project: wakemeiflose/php2shell](https://github.com/wakemeiflose/php2shell)
+- [Related upstream research repository](https://github.com/wakemeiflose/php2shell)
 
-This repository is a derivative research copy. Preserve applicable upstream attribution, license notices, and any notices required by the original license. Changes made in this repository should be documented separately from upstream work.
+This is a derivative research repository. Preserve upstream attribution and all applicable license notices. Verify vulnerability identifiers, affected-version ranges, and exploitability claims against authoritative advisories before relying on them.
 
 ## License
 

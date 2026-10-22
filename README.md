@@ -90,8 +90,4 @@ Review container logs and remove disposable test data as appropriate.
 - [PHP security announcements](https://www.php.net/archive/)
 - [Related upstream research repository](https://github.com/wakemeiflose/php2shell)
 
-This is a derivative research repository. Preserve upstream attribution and all applicable license notices. Verify vulnerability identifiers, affected-version ranges, and exploitability claims against authoritative advisories before relying on them.
-
-## License
-
-See [LICENSE](LICENSE) for the applicable license terms.
+Verify vulnerability identifiers, affected-version ranges, and exploitability claims against authoritative advisories before relying on them.

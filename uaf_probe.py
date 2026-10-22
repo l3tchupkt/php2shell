@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 """
-uaf_probe — CVE-2026-109619 Multipart Parser UAF Crash Probe
+uaf_probe.py - CVE-2026-109618 / CVE-2026-109619 Crash Probe
+Author: l3tchupkt (https://github.com/l3tchupkt)
 
-Sends malformed multipart/form-data payloads to trigger the heap
-use-after-free in PHP's SAPI multipart parser. This vulnerability
-exists independently of session.upload_progress and fires on any
-endpoint that processes multipart POST requests.
+Sends malformed multipart/form-data payloads and classifies the response.
+Crash indicators (connection reset, HTTP 502/503) are BEHAVIOURAL signals
+consistent with a PHP-FPM worker crash -- they are NOT proof of code
+execution or a confirmed heap UAF.
 
-Detection is behavioral: connection resets, HTTP 502/503 responses,
-or timeouts indicate that a PHP-FPM worker process has crashed,
-which is consistent with a use-after-free triggering a segfault.
+Background
+----------
+CVE-2026-109618: OOM corruption in PHP's longjmp handling (main/).
+CVE-2026-109619: Stale global state UAF; session.upload_progress is the
+  confirmed attack surface per the official PHP security advisory.
 
-This tool does NOT achieve code execution — it probes for the
-presence of the vulnerability. Use php2shell.py for the full
-RCE chain.
+The actual low-level memory corruption in both CVEs is non-deterministic
+from HTTP alone. A crash here shows the parser is stressed, not that the
+UAF has been exploited. Use exploit.py for the confirmed RCE chain.
 
 Usage:
   python3 uaf_probe.py -t http://localhost:8080/upload.php
-  python3 uaf_probe.py -t http://target/index.php -v --repeat 3
-  python3 uaf_probe.py -t http://target/upload.php --variant nested
-
-Author: Security Research Team
+  python3 uaf_probe.py -t http://localhost:8080/upload.php --repeat 3 -v
+  python3 uaf_probe.py -t http://localhost:8080/upload.php --variant nested
 """
 
 import argparse
@@ -32,37 +33,42 @@ import time
 from urllib.parse import urlparse
 
 __version__ = "1.0.0"
+__author__ = "l3tchupkt"
+__github__ = "https://github.com/l3tchupkt"
 
-BANNER = r"""
-  ┌──────────────────────────────────────────┐
-  │  CVE-2026-109619 — UAF Crash Probe       │
-  │  PHP Multipart Parser Use-After-Free     │
-  │  v{ver}                                    │
-  └──────────────────────────────────────────┘
-""".format(ver=__version__)
+BANNER = (
+    "\n"
+    "  ============================================\n"
+    "  CVE-2026-109618/109619 - Crash Probe v{ver} \n"
+    "  PHP Multipart Parser - Behavioural probe    \n"
+    "  Author: l3tchupkt (https://github.com/l3tchupkt)\n"
+    "  (crash = consistent with, not proof of UAF) \n"
+    "  ============================================\n"
+).format(ver=__version__)
+
 
 
 # --- Payload variants ---------------------------------------------------------
 
 VARIANTS = {
     "nested": {
-        "desc": "Nested boundaries with double-close — confuses parser buffer ownership during cleanup",
+        "desc": "Nested boundaries with double-close - confuses parser buffer ownership during cleanup",
         "build": None,  # set below
     },
     "longheader": {
-        "desc": "Oversized Content-Disposition and Content-Type headers — stresses buffer allocation",
+        "desc": "Oversized Content-Disposition and Content-Type headers - stresses buffer allocation",
         "build": None,
     },
     "nullbyte": {
-        "desc": "Null bytes in part body — corrupts length calculations in C string handling",
+        "desc": "Null bytes in part body - corrupts length calculations in C string handling",
         "build": None,
     },
     "truncated": {
-        "desc": "Missing closing boundary — forces parser to handle unexpected EOF during part read",
+        "desc": "Missing closing boundary - forces parser to handle unexpected EOF during part read",
         "build": None,
     },
     "interleaved": {
-        "desc": "Interleaved boundaries from two different multipart containers — confuses parser state machine",
+        "desc": "Interleaved boundaries from two different multipart containers - confuses parser state machine",
         "build": None,
     },
 }
@@ -321,7 +327,7 @@ def print_summary(results: dict):
 
 def main():
     p = argparse.ArgumentParser(
-        description="CVE-2026-109619 — PHP Multipart Parser UAF Crash Probe",
+        description="CVE-2026-109619 - PHP Multipart Parser UAF Crash Probe",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 examples:
